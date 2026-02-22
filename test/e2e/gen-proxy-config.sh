@@ -34,8 +34,40 @@ if [ -z "$ID_TOKEN" ]; then
     exit 1
 fi
 
-# 3. Generate Kubeconfig
+# 3. Fetch CA Certificate
+echo "Fetching CA certificate..." >&2
+CA_CERT_DATA=$(kubectl config view --raw -o jsonpath='{"{.clusters[?(@.name==\""}$(kubectl config current-context){\"\")].cluster.certificate-authority-data}"}')
+
+if [ -z "$CA_CERT_DATA" ] || [ "$CA_CERT_DATA" = "null" ]; then
+    # Try getting the ingress cert as an alternative if we are targeting the ingress proxy directly
+    CA_CERT_DATA=$(kubectl get secret -n konflux-ui konflux-ui-tls -o jsonpath='{.data.ca\.crt}' 2>/dev/null || echo "")
+fi
+
+# 4. Generate Kubeconfig
 echo "Generating kubeconfig at $OUTPUT_FILE..." >&2
+if [ -n "$CA_CERT_DATA" ]; then
+cat > "$OUTPUT_FILE" <<EOF
+apiVersion: v1
+clusters:
+- cluster:
+    certificate-authority-data: $CA_CERT_DATA
+    server: $PROXY_URL/api/k8s
+  name: konflux-proxy
+contexts:
+- context:
+    cluster: konflux-proxy
+    user: konflux-user
+  name: konflux-proxy
+current-context: konflux-proxy
+kind: Config
+preferences: {}
+users:
+- name: konflux-user
+  user:
+    token: $ID_TOKEN
+EOF
+else
+    echo "Warning: CA Certificate not found. Using insecure skip TLS verify." >&2
 cat > "$OUTPUT_FILE" <<EOF
 apiVersion: v1
 clusters:
@@ -56,5 +88,6 @@ users:
   user:
     token: $ID_TOKEN
 EOF
+fi
 
 echo "Success!" >&2
