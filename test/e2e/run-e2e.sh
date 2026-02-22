@@ -15,8 +15,6 @@ main() {
 
     # Generate proxy kubeconfig
     local proxy_kubeconfig="${script_path}/proxy.kubeconfig"
-    # Ensure helper script is executable
-    chmod +x "${script_path}/gen-proxy-config.sh"
     "${script_path}/gen-proxy-config.sh" "$proxy_kubeconfig"
 
     docker run \
