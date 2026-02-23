@@ -222,9 +222,9 @@ jobs:
           KONFLUX_CR: ${{ matrix.konflux_cr }}
 
           # GitHub App secrets (standardized names)
-          GITHUB_PRIVATE_KEY: ${{ secrets.APP_PRIVATE_KEY }}
-          GITHUB_APP_ID: ${{ secrets.APP_ID }}
-          WEBHOOK_SECRET: ${{ secrets.APP_WEBHOOK_SECRET }}
+          GITHUB_PRIVATE_KEY: ${{ secrets.APP_PRIVATE_KEY || 'dummy_key' }}
+          GITHUB_APP_ID: ${{ secrets.APP_ID || '123456' }}
+          WEBHOOK_SECRET: ${{ secrets.APP_WEBHOOK_SECRET || 'dummy_secret' }}
 
           # Quay secrets for image-controller (required by konflux-e2e.yaml CR)
           QUAY_TOKEN: ${{ secrets.QUAY_TOKEN }}
