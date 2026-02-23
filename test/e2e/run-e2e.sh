@@ -23,6 +23,23 @@ main() {
     # Get CA cert and decode base64, save to proxy-ca.crt
     kubectl config view -f "$proxy_kubeconfig" --raw -o jsonpath='{.clusters[0].cluster.certificate-authority-data}' | base64 -d > "$ca_cert_path" || touch "$ca_cert_path"
 
+    # The E2E tests expect a shared secret named "quay-repository" in the "e2e-secrets" namespace
+    echo "Provisioning e2e-secrets for the test suite..." >&2
+    kubectl create namespace e2e-secrets --dry-run=client -o yaml | kubectl apply -f -
+    kubectl create secret generic quay-repository -n e2e-secrets \
+        --from-literal=.dockerconfigjson="$quay_dockerconfig" \
+        --type=kubernetes.io/dockerconfigjson \
+        --dry-run=client -o yaml | kubectl apply -f -
+
+    # Grant user2@konflux.dev (the proxy user) access to read this shared secret
+    kubectl create role e2e-secrets-reader -n e2e-secrets \
+        --verb=get,list,watch --resource=secrets \
+        --dry-run=client -o yaml | kubectl apply -f -
+    kubectl create rolebinding e2e-secrets-reader-binding -n e2e-secrets \
+        --role=e2e-secrets-reader \
+        --user=user2@konflux.dev \
+        --dry-run=client -o yaml | kubectl apply -f -
+
     docker run \
         --network=host \
         -v "${proxy_kubeconfig}:/kube/config" \
