@@ -36,11 +36,13 @@ fi
 
 # 3. Fetch CA Certificate
 echo "Fetching CA certificate..." >&2
-CA_CERT_DATA=$(kubectl config view --raw --minify --flatten -o jsonpath='{.clusters[0].cluster.certificate-authority-data}' 2>/dev/null || true)
 
-if [ -z "$CA_CERT_DATA" ] || [ "$CA_CERT_DATA" = "null" ]; then
-    # Try getting the ingress cert as an alternative if we are targeting the ingress proxy directly
-    CA_CERT_DATA=$(kubectl get secret -n konflux-ui konflux-ui-tls -o jsonpath='{.data.ca\.crt}' 2>/dev/null || echo "")
+# The Nginx proxy serves a certificate signed by the cert-manager 'ui-ca' Issuer
+CA_CERT_DATA=$(kubectl get secret -n konflux-ui ui-ca -o jsonpath='{.data.tls\.crt}' 2>/dev/null || true)
+
+if [ -z "$CA_CERT_DATA" ]; then
+    # Fallback to kind cluster CA
+    CA_CERT_DATA=$(kubectl config view --raw --minify --flatten -o jsonpath='{.clusters[0].cluster.certificate-authority-data}' 2>/dev/null || echo "")
 fi
 
 # 4. Generate Kubeconfig
