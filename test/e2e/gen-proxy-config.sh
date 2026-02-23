@@ -36,7 +36,7 @@ fi
 
 # 3. Fetch CA Certificate
 echo "Fetching CA certificate..." >&2
-CA_CERT_DATA=$(kubectl config view --raw -o jsonpath='{"{.clusters[?(@.name==\""}$(kubectl config current-context){\"\")].cluster.certificate-authority-data}"}')
+CA_CERT_DATA=$(kubectl config view --raw --minify --flatten -o jsonpath='{.clusters[0].cluster.certificate-authority-data}' 2>/dev/null || true)
 
 if [ -z "$CA_CERT_DATA" ] || [ "$CA_CERT_DATA" = "null" ]; then
     # Try getting the ingress cert as an alternative if we are targeting the ingress proxy directly
