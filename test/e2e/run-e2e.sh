@@ -40,6 +40,22 @@ main() {
         --user=user2@konflux.dev \
         --dry-run=client -o yaml | kubectl apply -f -
 
+    # The E2E tests also require a 'user-ns2-managed' namespace and user2 needs full access to it
+    echo "Provisioning user-ns2-managed for the test suite..." >&2
+    kubectl create namespace user-ns2-managed --dry-run=client -o yaml | kubectl apply -f -
+    kubectl create clusterrolebinding user2-ns2-managed-admin \
+        --clusterrole=admin \
+        --user=user2@konflux.dev \
+        --namespace=user-ns2-managed \
+        --dry-run=client -o yaml | kubectl apply -f -
+    
+    # Also ensure user2 has access to user-ns2 just in case
+    kubectl create clusterrolebinding user2-ns2-admin \
+        --clusterrole=admin \
+        --user=user2@konflux.dev \
+        --namespace=user-ns2 \
+        --dry-run=client -o yaml | kubectl apply -f -
+
     docker run \
         --network=host \
         -v "${proxy_kubeconfig}:/kube/config" \
