@@ -17,9 +17,16 @@ main() {
     local proxy_kubeconfig="${script_path}/proxy.kubeconfig"
     "${script_path}/gen-proxy-config.sh" "$proxy_kubeconfig"
 
+    # Extract CA cert from kubeconfig and inject it as a trusted system CA 
+    # to fix "x509: certificate signed by unknown authority" errors in E2E runtime
+    local ca_cert_path="${script_path}/proxy-ca.crt"
+    # Get CA cert and decode base64, save to proxy-ca.crt
+    kubectl config view -f "$proxy_kubeconfig" --raw -o jsonpath='{.clusters[0].cluster.certificate-authority-data}' | base64 -d > "$ca_cert_path" || touch "$ca_cert_path"
+
     docker run \
         --network=host \
         -v "${proxy_kubeconfig}:/kube/config" \
+        -v "${ca_cert_path}:/etc/pki/ca-trust/source/anchors/proxy-ca.crt" \
         --env KUBECONFIG=/kube/config \
         -e GITHUB_TOKEN="$github_token" \
         -e QUAY_TOKEN="$(base64 <<< "$quay_dockerconfig")" \
@@ -28,8 +35,9 @@ main() {
         -e TEST_ENVIRONMENT=upstream \
         -e RELEASE_SERVICE_CATALOG_REVISION="$catalog_revision" \
         -e RELEASE_CATALOG_TA_QUAY_TOKEN="$release_catalog_ta_quay_token" \
+        --user 0 \
         "$E2E_TEST_IMAGE" \
-        /bin/bash -c "ginkgo -v --label-filter=upstream-konflux --focus=\"Test local\" /konflux-e2e/konflux-e2e.test"
+        /bin/bash -c "update-ca-trust && ginkgo -v --label-filter=upstream-konflux --focus=\"Test local\" /konflux-e2e/konflux-e2e.test"
 }
 
 
