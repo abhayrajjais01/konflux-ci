@@ -43,18 +43,35 @@ main() {
     # The E2E tests also require a 'user-ns2-managed' namespace and user2 needs full access to it
     echo "Provisioning user-ns2-managed for the test suite..." >&2
     kubectl create namespace user-ns2-managed --dry-run=client -o yaml | kubectl apply -f -
-    kubectl create clusterrolebinding user2-ns2-managed-admin \
-        --clusterrole=admin \
-        --user=user2@konflux.dev \
-        --namespace=user-ns2-managed \
-        --dry-run=client -o yaml | kubectl apply -f -
-    
-    # Also ensure user2 has access to user-ns2 just in case
-    kubectl create clusterrolebinding user2-ns2-admin \
-        --clusterrole=admin \
-        --user=user2@konflux.dev \
-        --namespace=user-ns2 \
-        --dry-run=client -o yaml | kubectl apply -f -
+    kubectl create namespace user-ns2 --dry-run=client -o yaml | kubectl apply -f -
+
+    # Grant user2 permissions to get, list, watch, update, and patch namespaces directly.
+    # The Ginkgo tests try to label the user-ns2 and user-ns2-managed namespaces.
+    # The standard 'admin' role doesn't grant permission to modify the namespace object itself.
+    cat <<EOF | kubectl apply -f -
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: e2e-namespace-updater
+rules:
+- apiGroups: [""]
+  resources: ["namespaces"]
+  resourceNames: ["user-ns2-managed", "user-ns2"]
+  verbs: ["get", "list", "watch", "update", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: user2-e2e-namespace-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: e2e-namespace-updater
+subjects:
+- kind: User
+  name: user2@konflux.dev
+EOF
+
 
     docker run \
         --network=host \
