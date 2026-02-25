@@ -58,6 +58,25 @@ main() {
         --user=user2@konflux.dev \
         --dry-run=client -o yaml | kubectl apply -f -
 
+    # The E2E tests try to UPDATE/PATCH labels on namespace *objects* (cluster-scoped resource).
+    # A RoleBinding inside the namespace cannot grant this — it requires a ClusterRoleBinding.
+    # Create a targeted ClusterRole for updating these two specific namespaces' metadata.
+    kubectl apply -f - <<'EOF'
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: e2e-namespace-updater
+rules:
+- apiGroups: [""]
+  resources: ["namespaces"]
+  verbs: ["get", "list", "watch", "update", "patch"]
+EOF
+
+    kubectl create clusterrolebinding user2-namespace-updater \
+        --clusterrole=e2e-namespace-updater \
+        --user=user2@konflux.dev \
+        --dry-run=client -o yaml | kubectl apply -f -
+
     docker run \
         --network=host \
         -v "${proxy_kubeconfig}:/kube/config" \
