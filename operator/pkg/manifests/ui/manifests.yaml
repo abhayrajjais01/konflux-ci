@@ -357,7 +357,7 @@ spec:
             secretKeyRef:
               key: client-secret
               name: oauth2-proxy-client-secret
-        image: quay.io/konflux-ci/dex:8b787ea30e1b202c61edb653f3ebc814bdd93f5d6c4f0cdf419bfd83c8173499
+        image: quay.io/konflux-ci/dex@sha256:4c5c3f50c3732ebf2f22fa57b6143f8d2c4792cff3760fb2f45d64467798461d
         name: dex
         ports:
         - containerPort: 9443
@@ -429,7 +429,7 @@ spec:
         - daemon off;
         - -c
         - /etc/nginx/nginx.conf
-        image: registry.access.redhat.com/ubi9/nginx-124@sha256:b9c2c8657761ea521f49ade5b330e5f81ac03372a093588f142de736e13336af
+        image: registry.access.redhat.com/ubi9/nginx-124@sha256:ece0c2d70199f0bcd3316d6913ef4b8e815d0229693156dee4bad8d69b13edc6
         livenessProbe:
           failureThreshold: 3
           httpGet:
@@ -498,7 +498,7 @@ spec:
             secretKeyRef:
               key: cookie-secret
               name: oauth2-proxy-cookie-secret
-        image: quay.io/oauth2-proxy/oauth2-proxy:latest@sha256:121cdc6520a02d7a2ddd181af6dbdc0f11f7d0c0d9353a999a69c3998cbfe37e
+        image: quay.io/konflux-ci/oauth2-proxy@sha256:1f4a37529de4f750099af18e113556bd995fe6922030c614b7d6d23eaa0bd318
         name: oauth2-proxy
         ports:
         - containerPort: 6000
@@ -520,7 +520,7 @@ spec:
         - -R
         - /opt/app-root/src/.
         - /mnt/static-content/
-        image: quay.io/konflux-ci/konflux-ui:fa9b7642f2bb87ad9f599cf5b17ae2aa23ffb57e
+        image: quay.io/konflux-ci/konflux-ui@sha256:7044a2f0139d2925c7e32ba4728640d43c46811eae7beb52e1b82449ec5cd65b
         name: copy-static-content
         resources:
           limits:
@@ -559,7 +559,7 @@ spec:
           fi
           sed "s/__TEKTON_RESULTS_HOSTNAME__/$results_hostname/" /mnt/nginx-templates/tekton-results.conf > /mnt/nginx-generated-location-config/tekton-results.conf
           chmod 640 /mnt/nginx-generated-location-config/tekton-results.conf
-        image: quay.io/konflux-ci/konflux-ui:fa9b7642f2bb87ad9f599cf5b17ae2aa23ffb57e
+        image: quay.io/konflux-ci/konflux-ui@sha256:7044a2f0139d2925c7e32ba4728640d43c46811eae7beb52e1b82449ec5cd65b
         name: generate-nginx-configs
         resources:
           limits:
