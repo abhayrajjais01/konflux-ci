@@ -40,49 +40,18 @@ main() {
         --user=user2@konflux.dev \
         --dry-run=client -o yaml | kubectl apply -f -
 
-    # The E2E tests also require a 'user-ns2-managed' namespace and user2 needs full access to it
+    # The E2E tests require 'user-ns2-managed' namespace
     echo "Provisioning user-ns2-managed for the test suite..." >&2
     kubectl create namespace user-ns2-managed --dry-run=client -o yaml | kubectl apply -f -
-    # Use RoleBinding (not ClusterRoleBinding) so --namespace is respected
-    kubectl create rolebinding user2-ns2-managed-admin \
-        -n user-ns2-managed \
-        --clusterrole=admin \
-        --user=user2@konflux.dev \
-        --dry-run=client -o yaml | kubectl apply -f -
 
-    # Also ensure user2 has admin access to their primary tenant namespace
-    kubectl create namespace user-ns2 --dry-run=client -o yaml | kubectl apply -f -
-    kubectl create rolebinding user2-ns2-admin \
-        -n user-ns2 \
-        --clusterrole=admin \
-        --user=user2@konflux.dev \
-        --dry-run=client -o yaml | kubectl apply -f -
-
-    # The E2E tests try to UPDATE/PATCH labels on namespace *objects* (cluster-scoped resource).
-    # A RoleBinding inside the namespace cannot grant this — it requires a ClusterRoleBinding.
-    # Create a targeted ClusterRole for updating these two specific namespaces' metadata.
-    kubectl apply -f - <<'EOF'
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: e2e-namespace-updater
-rules:
-- apiGroups: [""]
-  resources: ["namespaces"]
-  verbs: ["get", "list", "watch", "update", "patch"]
-EOF
-
-    kubectl create clusterrolebinding user2-namespace-updater \
-        --clusterrole=e2e-namespace-updater \
-        --user=user2@konflux.dev \
-        --dry-run=client -o yaml | kubectl apply -f -
-
-    # The E2E test's BeforeAll tries to CREATE a RoleBinding granting Konflux CRD permissions
-    # (appstudio.redhat.com, projctl.konflux.dev). Kubernetes RBAC escalation prevention
-    # blocks this unless user2 already holds those permissions. Bind user2 to the aggregated
-    # konflux-admin-user-actions ClusterRole (same role create-tenant.sh uses for tenant admins).
-    kubectl create clusterrolebinding user2-konflux-admin-actions \
-        --clusterrole=konflux-admin-user-actions \
+    # Grant user2@konflux.dev cluster-admin for the ephemeral Kind CI cluster.
+    # The E2E suite was designed for direct cluster-admin kubeconfig access — routing
+    # through the proxy is new, and there's no documented minimum RBAC for the proxy user.
+    # On this disposable Kind cluster (destroyed after each run) this is safe: we're
+    # validating the proxy auth chain (confirmed working by real RBAC 403s, not 401s),
+    # not testing RBAC policy enforcement.
+    kubectl create clusterrolebinding user2-cluster-admin \
+        --clusterrole=cluster-admin \
         --user=user2@konflux.dev \
         --dry-run=client -o yaml | kubectl apply -f -
 
