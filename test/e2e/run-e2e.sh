@@ -77,6 +77,15 @@ EOF
         --user=user2@konflux.dev \
         --dry-run=client -o yaml | kubectl apply -f -
 
+    # The E2E test's BeforeAll tries to CREATE a RoleBinding granting Konflux CRD permissions
+    # (appstudio.redhat.com, projctl.konflux.dev). Kubernetes RBAC escalation prevention
+    # blocks this unless user2 already holds those permissions. Bind user2 to the aggregated
+    # konflux-admin-user-actions ClusterRole (same role create-tenant.sh uses for tenant admins).
+    kubectl create clusterrolebinding user2-konflux-admin-actions \
+        --clusterrole=konflux-admin-user-actions \
+        --user=user2@konflux.dev \
+        --dry-run=client -o yaml | kubectl apply -f -
+
     docker run \
         --network=host \
         -v "${proxy_kubeconfig}:/kube/config" \
