@@ -21,7 +21,7 @@ main() {
     # to fix "x509: certificate signed by unknown authority" errors in E2E runtime
     local ca_cert_path="${script_path}/proxy-ca.crt"
     # Get CA cert and decode base64, save to proxy-ca.crt
-    kubectl config view -f "$proxy_kubeconfig" --raw -o jsonpath='{.clusters[0].cluster.certificate-authority-data}' | base64 -d > "$ca_cert_path" || touch "$ca_cert_path"
+    kubectl config view --kubeconfig="$proxy_kubeconfig" --raw -o jsonpath='{.clusters[0].cluster.certificate-authority-data}' | base64 -d > "$ca_cert_path" || touch "$ca_cert_path"
 
     # The E2E tests expect a shared secret named "quay-repository" in the "e2e-secrets" namespace
     echo "Provisioning e2e-secrets for the test suite..." >&2
